@@ -7,7 +7,7 @@ def test_id_is_the_correct_length():
 
 
 def test_id_uses_correct_characters():
-    generated_id = generate()
+    generated_id = str(generate())
     check = re.compile('^[' + ID_CHARACTERS + ']+$')
     assert check.match(generated_id) is not None
 
