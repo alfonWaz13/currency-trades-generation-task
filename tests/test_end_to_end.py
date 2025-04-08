@@ -1,3 +1,6 @@
+import os
+import subprocess
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from src.currency_trade_id_repository import MemoryCurrencyTradeIdRepository
@@ -46,3 +49,33 @@ class TestEndToEnd:
                 generated_ids.update(chunk)
 
         assert len(generated_ids) == 5_000_000
+
+    def test_restarting_process_does_not_duplicate_ids(self):
+        ids = set()
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.getcwd() + ':' + env.get('PYTHONPATH', '')
+
+        process = subprocess.Popen(
+            ["/usr/bin/env", "python", "-u", "-m", "scripts.infinite_generation"],
+            stdout=subprocess.PIPE,
+            env=env)
+        time.sleep(2)
+        process.kill()
+        for incoming_id in process.stdout.readlines():
+            incoming_id = incoming_id.strip()
+            ids.add(incoming_id)
+
+        process = subprocess.Popen(
+            ["/usr/bin/env", "python", "-u", "-m", "scripts.infinite_generation"],
+            stdout=subprocess.PIPE,
+            env=env)
+        time.sleep(2)
+        process.kill()
+        for incoming_id in process.stdout.readlines():
+            incoming_id = incoming_id.strip()
+            # Here's our duplicate check. Restarting the process should
+            # not duplicate the ids we get from it.
+            assert incoming_id not in ids
+            ids.add(incoming_id)
+        # And we should have got at least 2
+        assert len(ids) > 1
