@@ -2,8 +2,8 @@ import random
 
 from src.currency_trade_id.currency_trade_id import CurrencyTradeId, ID_CHARACTERS, CURRENCY_TRADES_ID_LENGTH
 from src import currency_trade_id_repository
-from src.currency_trade_id_repository.exceptions import MultipleCurrencyTradeInsertionError
 from src.currency_trade_id_repository.exceptions import MultipleCurrencyTradeInsertionError, \
+    EmptyCurrencyTradeIdException
 
 
 class CurrencyTradeIdGenerator:
@@ -29,7 +29,7 @@ class CurrencyTradeIdGenerator:
         while len(new_currency_trade_ids) < number_of_ids:
 
             number_new_currency_trades_to_generate = number_of_ids - len(new_currency_trade_ids) - len(currency_trade_ids_to_insert)
-            currency_trade_ids_to_insert.update(self._get_multiple_random_currency_trade_ids(number_new_currency_trades_to_generate))
+            currency_trade_ids_to_insert.update(self._get_multiple_sorted_currency_trade_ids(number_new_currency_trades_to_generate))
 
             try:
                 self.repository.add_bulk_currency_trade_ids(currency_trade_ids_to_insert)
@@ -57,6 +57,17 @@ class CurrencyTradeIdGenerator:
             return CurrencyTradeId(ID_CHARACTERS[0] * CURRENCY_TRADES_ID_LENGTH)
 
         return self._get_next_currency_trade_id_in_sequence(last_currency_trade_id_stored)
+
+    def _get_multiple_sorted_currency_trade_ids(self, number_of_ids: int) -> set[CurrencyTradeId]:
+        sorted_currency_trade_ids = set()
+        next_currency_trade_id = self._get_sorted_currency_trade_id()
+        sorted_currency_trade_ids.add(next_currency_trade_id)
+
+        while len(sorted_currency_trade_ids) < number_of_ids:
+            next_currency_trade_id = self._get_next_currency_trade_id_in_sequence(next_currency_trade_id)
+            sorted_currency_trade_ids.add(next_currency_trade_id)
+
+        return sorted_currency_trade_ids
 
     @classmethod
     def _get_next_currency_trade_id_in_sequence(cls, previous_id: CurrencyTradeId) -> CurrencyTradeId:
