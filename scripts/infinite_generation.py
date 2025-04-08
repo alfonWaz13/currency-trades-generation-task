@@ -1,9 +1,10 @@
 import sys
 
-from src.currency_trade_id_repository import MemoryCurrencyTradeIdRepository
+import config
+from src.currency_trade_id_repository import MySqlCurrencyTradeIdRepository
 from src.generation import CurrencyTradeIdGenerator
 
-repository = MemoryCurrencyTradeIdRepository()
+repository = MySqlCurrencyTradeIdRepository(connection_configuration=config.MySqlConfig.to_dict())
 generator = CurrencyTradeIdGenerator(repository)
 
 
