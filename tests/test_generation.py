@@ -1,9 +1,5 @@
-# -*- coding: utf-8 -*-
-
 import re
-import pytest
-from identity.generation import generate
-from identity.constants import ID_CHARACTERS
+from src.generation import generate, ID_CHARACTERS
 
 
 def test_id_is_the_correct_length():

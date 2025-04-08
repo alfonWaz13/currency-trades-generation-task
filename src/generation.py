@@ -1,5 +1,9 @@
-# -*- coding: utf-8 -*-
+import random
+
+
+ID_CHARACTERS = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+CURRENCY_TRADES_ID_LENGTH = 7
 
 
 def generate():
-    return None
+    return ''.join(random.choices(ID_CHARACTERS, k=CURRENCY_TRADES_ID_LENGTH))
