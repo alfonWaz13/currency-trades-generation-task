@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from src.currency_trade_id_repository import SqliteCurrencyTradeIdRepository, AlreadySavedCurrencyTradeIdError
+from src.currency_trade_id_repository.exceptions import MultipleCurrencyTradeInsertionError
 from tests.currency_trade_id_mother import CurrencyTradeIdMother
 
 
@@ -52,3 +53,26 @@ class TestSqliteCurrencyTradeIdRepository:
 
         with pytest.raises(AlreadySavedCurrencyTradeIdError):
             repository.add_currency_trade_id(currency_trade_id)
+
+    def test_bulk_currency_trade_ids_are_correctly_added(self):
+        repository = SqliteCurrencyTradeIdRepository(db_path=self.database_path)
+        currency_trade_ids = {CurrencyTradeIdMother.get_valid() for _ in range(10)}
+
+        repository.add_bulk_currency_trade_ids(currency_trade_ids)
+
+        for currency_trade_id in currency_trade_ids:
+            self.assert_id_in_database(currency_trade_id)
+
+    def test_error_raised_when_duplicated_currency_trade_ids_are_added_in_bulk(self):
+        repository = SqliteCurrencyTradeIdRepository(db_path=self.database_path)
+        currency_trade_id_1 = CurrencyTradeIdMother.get_valid()
+        currency_trade_id_2 = CurrencyTradeIdMother.get_valid()
+        currency_trade_id_3 = CurrencyTradeIdMother.get_valid()
+
+        repository.add_bulk_currency_trade_ids({currency_trade_id_1, currency_trade_id_2, currency_trade_id_3})
+
+        with pytest.raises(MultipleCurrencyTradeInsertionError) as exception:
+            repository.add_bulk_currency_trade_ids({currency_trade_id_1, currency_trade_id_2})
+
+        assert currency_trade_id_1 in exception.value.already_saved_currency_trade_ids
+        assert currency_trade_id_2 in exception.value.already_saved_currency_trade_ids
