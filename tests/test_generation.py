@@ -32,3 +32,8 @@ class TestGeneration:
         ]
         currency_trade_id_generator.generate()
         assert self.repository.add_currency_trade_id.call_count == 2
+
+    def test_generate_bulk_returns_a_set_of_currency_trade_ids(self):
+        currency_trade_id_generator = CurrencyTradeIdGenerator(repository=self.repository)
+        currency_trade_ids = currency_trade_id_generator.generate_bulk(10)
+        assert len(currency_trade_ids) == 10
