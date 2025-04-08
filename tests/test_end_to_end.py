@@ -31,21 +31,18 @@ class TestEndToEnd:
             generated_count += 1
             assert len(generated_ids) == generated_count * 1000
 
-    def test_concurrent_bulk_generation(self):
+    def test_concurrent_bulk_generation_generates_unique_ids_without_errors_with_concurrency(self):
         generated_ids = set()
-        bulk_args = []
-        for _ in range(0, 2000):
-            bulk_args.append(2500)
+        bulk_args = [2500] * 2000
 
         def consumer_function(ids):
             return list(ids)
 
         with ThreadPoolExecutor(max_workers=9) as pool:
-            generators = list(pool.map(self.currency_trade_id_generator.generate_bulk, bulk_args))
-            ids = list(pool.map(consumer_function, generators))
+            generators = pool.map(self.currency_trade_id_generator.generate_bulk, bulk_args)
+            ids = pool.map(consumer_function, generators)
 
             for chunk in ids:
                 generated_ids.update(chunk)
 
-        assert len(generated_ids) == 5000000
-
+        assert len(generated_ids) == 5_000_000
