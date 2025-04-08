@@ -7,12 +7,8 @@ from src.generation import CurrencyTradeIdGenerator
 class TestGeneration:
 
     @classmethod
-    def setup_class(cls):
-        cls.repository = MagicMock()
-
-    @classmethod
     def setup_method(cls):
-        cls.repository.reset_mock()
+        cls.repository = MagicMock()
 
     def test_generate_returns_a_currency_trade_id(self):
         currency_trade_id_generator = CurrencyTradeIdGenerator(repository=self.repository)
