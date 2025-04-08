@@ -1,9 +1,11 @@
 import os
+import sqlite3
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
-from src.currency_trade_id_repository import MemoryCurrencyTradeIdRepository
+from src.currency_trade_id_repository import SqliteCurrencyTradeIdRepository
 from src.generation import CurrencyTradeIdGenerator
 
 
@@ -11,12 +13,23 @@ class TestEndToEnd:
 
     @classmethod
     def setup_class(cls):
-        cls.repository = MemoryCurrencyTradeIdRepository()
+        cls.database_path = Path("test.db")
+        cls.repository = SqliteCurrencyTradeIdRepository(db_path=cls.database_path)
         cls.currency_trade_id_generator = CurrencyTradeIdGenerator(repository=cls.repository)
 
     @classmethod
     def setup_method(cls):
-        cls.repository._currency_trade_ids = set()
+        with sqlite3.connect(cls.database_path) as connection:
+            cursor = connection.cursor()
+            cursor.execute("PRAGMA table_info(currency_trade_ids)")
+            if cursor.fetchall():
+                connection.execute("DELETE FROM currency_trade_ids")
+                connection.commit()
+
+    @classmethod
+    def teardown_class(cls):
+        if cls.database_path.exists():
+            os.remove(cls.database_path)
 
 
     def test_ids_returned_by_generator_are_unique(self):
