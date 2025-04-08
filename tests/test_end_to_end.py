@@ -2,7 +2,10 @@ import os
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
+from unittest import mock
+
 import mysql.connector
+import pytest
 
 import config
 from src.currency_trade_id_repository import MySqlCurrencyTradeIdRepository
@@ -92,3 +95,10 @@ class TestEndToEnd:
             ids.add(incoming_id)
         # And we should have got at least 2
         assert len(ids) > 1
+
+    @pytest.mark.timeout(6000)
+    def test_generate_bulk_performance(self):
+
+        with mock.patch('src.currency_trade_id.currency_trade_id.ID_CHARACTERS', '0ABCDEFG'), \
+                mock.patch('src.generation.ID_CHARACTERS', '0ABCDEFG'):
+            self.currency_trade_id_generator.generate_bulk(2097100)
