@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS currency_trades (
+    id VARCHAR(10) PRIMARY KEY
+);
