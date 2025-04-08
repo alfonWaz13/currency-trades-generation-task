@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass
 
-from src.exceptions import InvalidCurrencyTradeIdLengthError, InvalidCharactersTradeIdError
+from .exceptions import InvalidCurrencyTradeIdLengthError, InvalidCharactersTradeIdError
 
 ID_CHARACTERS = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 CURRENCY_TRADES_ID_LENGTH = 7
