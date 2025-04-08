@@ -9,6 +9,10 @@ class TestEndToEnd:
         cls.repository = MemoryCurrencyTradeIdRepository()
         cls.currency_trade_id_generator = CurrencyTradeIdGenerator(repository=cls.repository)
 
+    @classmethod
+    def setup_method(cls):
+        cls.repository._currency_trade_ids = set()
+
 
     def test_ids_returned_by_generator_are_unique(self):
         ids = set()
@@ -16,3 +20,11 @@ class TestEndToEnd:
             ids.add(self.currency_trade_id_generator.generate())
 
         assert len(ids) == 10
+
+    def test_ids_are_unique_generated_in_bulk(self):
+        generated_ids = set()
+        generated_count = 0
+        while generated_count < 100:
+            generated_ids.update(self.currency_trade_id_generator.generate_bulk(1000))
+            generated_count += 1
+            assert len(generated_ids) == generated_count * 1000
