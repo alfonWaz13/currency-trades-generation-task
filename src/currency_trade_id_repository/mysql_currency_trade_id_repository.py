@@ -3,7 +3,8 @@ from mysql.connector.pooling import PooledMySQLConnection
 
 from src.currency_trade_id import CurrencyTradeId
 
-from .exceptions import AlreadySavedCurrencyTradeIdError, MultipleCurrencyTradeInsertionError
+from .exceptions import (AlreadySavedCurrencyTradeIdError, MultipleCurrencyTradeInsertionError,
+                         EmptyCurrencyTradeIdException)
 from .currency_trade_id_repository import CurrencyTradeIdRepository
 
 
@@ -71,3 +72,12 @@ class MySqlCurrencyTradeIdRepository(CurrencyTradeIdRepository):
         cursor.execute(query, [str(t) for t in currency_trade_ids])
 
         return {CurrencyTradeId(row[0]) for row in cursor.fetchall()}
+
+    def get_last_currency_trade_id(self) -> CurrencyTradeId:
+        with self.pool.get_connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT {self._id_column} FROM {self._currency_trade_id_table} ORDER BY {self._id_column} DESC LIMIT 1")
+            row = cursor.fetchone()
+            if row:
+                return CurrencyTradeId(row[0])
+            raise EmptyCurrencyTradeIdException()

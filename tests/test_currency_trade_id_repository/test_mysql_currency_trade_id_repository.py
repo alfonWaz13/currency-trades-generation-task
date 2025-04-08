@@ -2,6 +2,7 @@ import mysql.connector
 import pytest
 
 import config
+from src.currency_trade_id import CurrencyTradeId
 from src.currency_trade_id_repository import MySqlCurrencyTradeIdRepository, exceptions
 from tests.currency_trade_id_mother import CurrencyTradeIdMother
 
@@ -79,3 +80,19 @@ class TestMySqlCurrencyTradeIdRepository:
 
         assert currency_trade_id_1 in exception.value.already_saved_currency_trade_ids
         assert currency_trade_id_2 in exception.value.already_saved_currency_trade_ids
+
+    def test_last_currency_trade_id_is_retrieved(self):
+        repository = MySqlCurrencyTradeIdRepository(connection_configuration=self.connection_configuration)
+        currency_trade_id = CurrencyTradeId("0000000")
+
+        repository.add_currency_trade_id(currency_trade_id)
+        last_id = repository.get_last_currency_trade_id()
+
+        assert last_id == currency_trade_id
+
+    def test_empty_currency_trade_id_exception_is_raised_when_no_ids_are_stored(self):
+        repository = MySqlCurrencyTradeIdRepository(connection_configuration=self.connection_configuration)
+
+        with pytest.raises(exceptions.EmptyCurrencyTradeIdException):
+            repository.get_last_currency_trade_id()
+
