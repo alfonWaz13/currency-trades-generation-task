@@ -19,3 +19,6 @@ class CurrencyTradeIdGenerator:
                 currency_trade_id = None
 
         return currency_trade_id
+
+    def generate_bulk(self, number_of_ids: int) -> set[CurrencyTradeId]:
+        return set(self.generate() for _ in range(number_of_ids))
