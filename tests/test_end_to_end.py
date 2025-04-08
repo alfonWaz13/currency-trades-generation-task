@@ -9,6 +9,10 @@ class TestEndToEnd:
         cls.repository = MemoryCurrencyTradeIdRepository()
         cls.currency_trade_id_generator = CurrencyTradeIdGenerator(repository=cls.repository)
 
+    @classmethod
+    def setup_method(cls):
+        cls.repository._currency_trade_ids = set()
+
 
     def test_ids_returned_by_generator_are_unique(self):
         ids = set()
