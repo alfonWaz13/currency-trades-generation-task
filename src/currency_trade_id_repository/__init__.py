@@ -1,3 +1,4 @@
 from .currency_trade_id_repository import CurrencyTradeIdRepository
 from .memory_currency_trade_id_repository import MemoryCurrencyTradeIdRepository
+from .sqlite_currency_trade_id_repository import SqliteCurrencyTradeIdRepository
 from .exceptions import AlreadySavedCurrencyTradeIdError
