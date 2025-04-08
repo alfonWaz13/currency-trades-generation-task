@@ -1,6 +1,11 @@
+import os
+import subprocess
+import time
 from concurrent.futures import ThreadPoolExecutor
+import mysql.connector
 
-from src.currency_trade_id_repository import MemoryCurrencyTradeIdRepository
+import config
+from src.currency_trade_id_repository import MySqlCurrencyTradeIdRepository
 from src.generation import CurrencyTradeIdGenerator
 
 
@@ -8,12 +13,23 @@ class TestEndToEnd:
 
     @classmethod
     def setup_class(cls):
-        cls.repository = MemoryCurrencyTradeIdRepository()
+        cls.connection_configuration = config.MySqlConfig.to_dict()
+        cls.repository = MySqlCurrencyTradeIdRepository(connection_configuration=cls.connection_configuration)
         cls.currency_trade_id_generator = CurrencyTradeIdGenerator(repository=cls.repository)
 
     @classmethod
     def setup_method(cls):
-        cls.repository._currency_trade_ids = set()
+        connection = mysql.connector.connect(**cls.connection_configuration)
+        cursor = connection.cursor()
+
+        cursor.execute("SHOW TABLES LIKE 'currency_trades'")
+
+        if cursor.fetchone():
+            cursor.execute("DELETE FROM currency_trades")
+            connection.commit()
+
+        cursor.close()
+        connection.close()
 
 
     def test_ids_returned_by_generator_are_unique(self):
@@ -46,3 +62,33 @@ class TestEndToEnd:
                 generated_ids.update(chunk)
 
         assert len(generated_ids) == 5_000_000
+
+    def test_restarting_process_does_not_duplicate_ids(self):
+        ids = set()
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.getcwd() + ':' + env.get('PYTHONPATH', '')
+
+        process = subprocess.Popen(
+            ["/usr/bin/env", "python", "-u", "-m", "scripts.infinite_generation"],
+            stdout=subprocess.PIPE,
+            env=env)
+        time.sleep(2)
+        process.kill()
+        for incoming_id in process.stdout.readlines():
+            incoming_id = incoming_id.strip()
+            ids.add(incoming_id)
+
+        process = subprocess.Popen(
+            ["/usr/bin/env", "python", "-u", "-m", "scripts.infinite_generation"],
+            stdout=subprocess.PIPE,
+            env=env)
+        time.sleep(2)
+        process.kill()
+        for incoming_id in process.stdout.readlines():
+            incoming_id = incoming_id.strip()
+            # Here's our duplicate check. Restarting the process should
+            # not duplicate the ids we get from it.
+            assert incoming_id not in ids
+            ids.add(incoming_id)
+        # And we should have got at least 2
+        assert len(ids) > 1

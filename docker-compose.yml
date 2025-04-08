@@ -1,0 +1,14 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ebury-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "root1234"
+      MYSQL_DATABASE: "ebury_prueba_tecnica"
+      MYSQL_USER: "ebury_user"
+      MYSQL_PASSWORD: "ebury_password"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/mysql_db_init.sql

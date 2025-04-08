@@ -1,7 +1,9 @@
 from unittest.mock import MagicMock
 
 from src.currency_trade_id_repository import AlreadySavedCurrencyTradeIdError
+from src.currency_trade_id_repository.exceptions import MultipleCurrencyTradeInsertionError
 from src.generation import CurrencyTradeIdGenerator
+from tests.currency_trade_id_mother import CurrencyTradeIdMother
 
 
 class TestGeneration:
@@ -23,7 +25,7 @@ class TestGeneration:
     def test_generate_calls_add_currency_trade_again_if_id_exists(self):
         currency_trade_id_generator = CurrencyTradeIdGenerator(repository=self.repository)
         self.repository.add_currency_trade_id.side_effect = [
-            AlreadySavedCurrencyTradeIdError("Duplicated ID"),
+            AlreadySavedCurrencyTradeIdError(CurrencyTradeIdMother.get_valid()),
             None
         ]
         currency_trade_id_generator.generate()
@@ -33,3 +35,17 @@ class TestGeneration:
         currency_trade_id_generator = CurrencyTradeIdGenerator(repository=self.repository)
         currency_trade_ids = currency_trade_id_generator.generate_bulk(10)
         assert len(currency_trade_ids) == 10
+
+    def test_generate_bulk_stores_currency_trade_ids(self):
+        currency_trade_id_generator = CurrencyTradeIdGenerator(repository=self.repository)
+        currency_trade_id_generator.generate_bulk(2)
+        assert self.repository.add_bulk_currency_trade_ids.call_count == 1
+
+    def test_generate_bulk_calls_add_bulk_currency_trade_ids_again_if_ids_exist(self):
+        currency_trade_id_generator = CurrencyTradeIdGenerator(repository=self.repository)
+        self.repository.add_bulk_currency_trade_ids.side_effect = [
+            MultipleCurrencyTradeInsertionError(currency_trade_ids={CurrencyTradeIdMother.get_valid()}),
+            None
+        ]
+        currency_trade_id_generator.generate_bulk(10)
+        assert self.repository.add_bulk_currency_trade_ids.call_count == 2
