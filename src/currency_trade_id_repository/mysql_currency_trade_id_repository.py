@@ -1,4 +1,4 @@
-from mysql.connector import pooling, IntegrityError
+from mysql.connector import pooling, IntegrityError, InternalError
 from mysql.connector.pooling import PooledMySQLConnection
 
 from src.currency_trade_id import CurrencyTradeId
@@ -6,6 +6,9 @@ from src.currency_trade_id import CurrencyTradeId
 from .exceptions import (AlreadySavedCurrencyTradeIdError, MultipleCurrencyTradeInsertionError,
                          EmptyCurrencyTradeIdException)
 from .currency_trade_id_repository import CurrencyTradeIdRepository
+
+DEADLOCK_MYSQL_INTERNAL_ERROR = 1213
+MAX_ATTEMPTS = 5
 
 
 class MySqlCurrencyTradeIdRepository(CurrencyTradeIdRepository):
@@ -47,14 +50,22 @@ class MySqlCurrencyTradeIdRepository(CurrencyTradeIdRepository):
 
         values = [(str(currency_trade_id),) for currency_trade_id in currency_trade_ids]
         query = f"INSERT INTO {self._currency_trade_id_table} ({self._id_column}) VALUES (%s)"
-        with self.pool.get_connection() as connection:
-            cursor = connection.cursor()
-            try:
-                cursor.executemany(query, values)
-                connection.commit()
-            except IntegrityError:
-                duplicated_ids = self._get_duplicated_currency_trade_ids(connection, currency_trade_ids)
-                raise MultipleCurrencyTradeInsertionError(currency_trade_ids=duplicated_ids)
+
+        attempts = 1
+        while attempts <= MAX_ATTEMPTS:
+            with self.pool.get_connection() as connection:
+                cursor = connection.cursor()
+                try:
+                    cursor.executemany(query, values)
+                    connection.commit()
+                    return
+                except IntegrityError:
+                    duplicated_ids = self._get_duplicated_currency_trade_ids(connection, currency_trade_ids)
+                    raise MultipleCurrencyTradeInsertionError(currency_trade_ids=duplicated_ids)
+                except InternalError as error:
+                    if error.errno != DEADLOCK_MYSQL_INTERNAL_ERROR or attempts >= MAX_ATTEMPTS:
+                        raise
+                    attempts += 1
 
     def _get_duplicated_currency_trade_ids(self,
                                            connection: PooledMySQLConnection,

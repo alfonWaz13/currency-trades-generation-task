@@ -1,9 +1,14 @@
+from unittest import mock
+from unittest.mock import MagicMock
+
 import mysql.connector
 import pytest
+from mysql.connector import InternalError
 
 import config
 from src.currency_trade_id import CurrencyTradeId
 from src.currency_trade_id_repository import MySqlCurrencyTradeIdRepository, exceptions
+from src.currency_trade_id_repository.mysql_currency_trade_id_repository import DEADLOCK_MYSQL_INTERNAL_ERROR, MAX_ATTEMPTS
 from tests.currency_trade_id_mother import CurrencyTradeIdMother
 
 
@@ -96,3 +101,53 @@ class TestMySqlCurrencyTradeIdRepository:
         with pytest.raises(exceptions.EmptyCurrencyTradeIdException):
             repository.get_last_currency_trade_id()
 
+    def test_bulk_insert_retries_when_deadlock_occurs(self):
+        repository = MySqlCurrencyTradeIdRepository(connection_configuration=self.connection_configuration)
+        currency_trade_ids = {CurrencyTradeIdMother.get_valid() for _ in range(5)}
+
+        mock_cursor = MagicMock()
+        mock_cursor.executemany.side_effect = [
+            InternalError(msg="Deadlock", errno=DEADLOCK_MYSQL_INTERNAL_ERROR),
+            None,
+        ]
+
+        mock_connection = MagicMock()
+        mock_connection.__enter__.return_value.cursor.return_value = mock_cursor
+
+        with mock.patch.object(repository.pool, "get_connection", return_value=mock_connection):
+            repository.add_bulk_currency_trade_ids(currency_trade_ids)
+
+        assert mock_cursor.executemany.call_count == 2
+        mock_connection.__enter__.return_value.commit.assert_called_once()
+
+    def test_bulk_insert_raises_exception_after_max_attempts(self):
+        repository = MySqlCurrencyTradeIdRepository(connection_configuration=self.connection_configuration)
+        currency_trade_ids = {CurrencyTradeIdMother.get_valid() for _ in range(5)}
+
+        mock_cursor = MagicMock()
+        mock_cursor.executemany.side_effect = [InternalError(msg="Deadlock", errno=DEADLOCK_MYSQL_INTERNAL_ERROR)] * MAX_ATTEMPTS
+
+        mock_connection = MagicMock()
+        mock_connection.__enter__.return_value.cursor.return_value = mock_cursor
+
+        with mock.patch.object(repository.pool, "get_connection", return_value=mock_connection):
+            with pytest.raises(InternalError):
+                repository.add_bulk_currency_trade_ids(currency_trade_ids)
+
+        assert mock_cursor.executemany.call_count == MAX_ATTEMPTS
+
+    def test_bulk_insert_raises_exception_when_other_error_occurs(self):
+        repository = MySqlCurrencyTradeIdRepository(connection_configuration=self.connection_configuration)
+        currency_trade_ids = {CurrencyTradeIdMother.get_valid() for _ in range(5)}
+
+        mock_cursor = MagicMock()
+        mock_cursor.executemany.side_effect = InternalError(msg="Some other error")
+
+        mock_connection = MagicMock()
+        mock_connection.__enter__.return_value.cursor.return_value = mock_cursor
+
+        with mock.patch.object(repository.pool, "get_connection", return_value=mock_connection):
+            with pytest.raises(InternalError):
+                repository.add_bulk_currency_trade_ids(currency_trade_ids)
+
+        assert mock_cursor.executemany.call_count == 1
