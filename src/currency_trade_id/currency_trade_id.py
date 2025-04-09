@@ -23,9 +23,18 @@ class CurrencyTradeId:
                 expected_characters=ID_CHARACTERS
             )
 
-
     def __str__(self):
         return self.value
 
     def __len__(self):
         return len(self.value)
+
+    def get_final_digits(self, number_of_digits: int) -> str:
+        if number_of_digits > len(self.value):
+            raise ValueError("number_of_digits must be less than or equal to the length of the currency trade id")
+        return self.value[-number_of_digits:]
+
+    def get_initial_digits(self, number_of_digits: int) -> str:
+        if number_of_digits > len(self.value):
+            raise ValueError("number_of_digits must be less than or equal to the length of the currency trade id")
+        return self.value[:number_of_digits]
