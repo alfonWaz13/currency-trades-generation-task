@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -97,9 +98,12 @@ class TestEndToEnd:
         assert len(ids) > 1
 
     @pytest.mark.timeout(6000)
-    def test_generate_bulk_performance(self):
+    def test_almost_every_possible_id_is_generated_in_reasonable_time(self):
 
         new_pattern = '0ABCDEFG'
         with mock.patch('src.currency_trade_id.currency_trade_id.ID_CHARACTERS', new_pattern), \
                 mock.patch('src.generation.ID_CHARACTERS', new_pattern):
-            self.currency_trade_id_generator.generate_bulk(2097100)
+            currency_trade_ids = self.currency_trade_id_generator.generate_bulk(2097100)
+
+        for currency_trade_id in currency_trade_ids:
+            assert re.compile('^[' + new_pattern + ']+$').match(str(currency_trade_id))
