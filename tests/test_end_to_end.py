@@ -99,6 +99,7 @@ class TestEndToEnd:
     @pytest.mark.timeout(6000)
     def test_generate_bulk_performance(self):
 
-        with mock.patch('src.currency_trade_id.currency_trade_id.ID_CHARACTERS', '0ABCDEFG'), \
-                mock.patch('src.generation.ID_CHARACTERS', '0ABCDEFG'):
+        new_pattern = '0ABCDEFG'
+        with mock.patch('src.currency_trade_id.currency_trade_id.ID_CHARACTERS', new_pattern), \
+                mock.patch('src.generation.ID_CHARACTERS', new_pattern):
             self.currency_trade_id_generator.generate_bulk(2097100)
