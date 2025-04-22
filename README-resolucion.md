@@ -89,7 +89,7 @@ Una vez instalado el entorno virtual, las dependencias, y levantada la base de d
 ejecutar los tests.
 
 ```bash
-python -m pytest
+python -m pytest --durations=0
 ```
 
 ---
